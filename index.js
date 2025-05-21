@@ -67,11 +67,11 @@ app.post('/api/register', async (req, res) => {
     const mailOptions = {
       from: process.env.ZOHO_EMAIL,
       to: email,
-      subject: 'Registration Successful – SHC’25',
+      subject: 'Registration Successful – SCM’25',
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <h2 style="color: #2c3e50;">Hello ${firstName},</h2>
-          <p>Thank you for registering for <strong>SHC’25</strong>! We are excited to receive you.</p>
+          <p>Thank you for registering for <strong>SCM’25</strong>! We are excited to receive you.</p>
           
           <p>Please be sure to check the website for important information concerning the meeting.</p>
           
@@ -80,7 +80,7 @@ app.post('/api/register', async (req, res) => {
             for resources that will bless you.
           </p>
           
-          <p style="margin-top: 30px;">See you this summer at the <strong>Summer Healing Campaign '25</strong>!</p>
+          <p style="margin-top: 30px;">See you this November at the <strong>Supernatural Camp Meeting '25</strong>!</p>
           
           <p>Looking forward to receiving you,</p>
           <p style="font-weight: bold;">Ayo Benson</p>
@@ -247,8 +247,8 @@ app.post('/api/send-user-broadcast', async (req, res) => {
     }
 
     const sendOps = users.map(u => {
-      const unsubscribeLink = `/unsubscribe/${u._id}`;
-      const unsubscribeDirect = `/api/unsubscribe/${u._id}`;
+      const unsubscribeLink = `https://supernaturalcampmeeting.org/unsubscribe/${u._id}`;
+      const unsubscribeDirect = `https://supernaturalcampmeeting.org/api/unsubscribe/${u._id}`;
       const html = `
         <p>Hello ${u.firstName},</p>
         ${customHtml}
@@ -306,8 +306,8 @@ app.post('/api/create-checkout-session', async (req, res) => {
       }],
       mode: 'payment',
       customer_email: email,
-      success_url: `https://summerhealingcampaign.org/payment-success`,
-      cancel_url: `https://summerhealingcampaign.org/payment-error`,
+      success_url: `https://supernaturalcampmeeting.org/payment-success`,
+      cancel_url: `https://supernaturalcampmeeting.org/payment-error`,
       metadata: {
         donor_name: name,
         donation_type: type
