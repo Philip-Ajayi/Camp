@@ -1,15 +1,20 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
 const Stripe = require('stripe');
 const path = require('path');
+const { Resend } = require('resend'); // ✅ Resend import
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
 const app = express();
 const port = process.env.PORT || 5000;
+
+// --------------------
+// Resend Setup
+// --------------------
+const resend = new Resend('re_euN3FPGc_4gwRE3EjetMmH3QTbVekQiAk'); // ✅ New API key
+const FROM_EMAIL = 'Supernatural CC <info@supernaturalcc.org>';
 
 // Middleware
 app.use(express.json());
@@ -30,28 +35,16 @@ const userSchema = new mongoose.Schema({
   phone: String,
   email: { type: String, unique: true, required: true },
   address: String,
-  year: { 
-    type: Number, 
-    default: () => new Date().getFullYear() 
-  },
+  year: { type: Number, default: () => new Date().getFullYear() },
   attendance: { type: [Number], default: [] },
   unsubscribed: { type: Boolean, default: false }
 });
 
 const User = mongoose.model('User', userSchema);
 
-// Nodemailer Setup (Zoho)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.ZOHO_EMAIL,
-    pass: process.env.ZOHO_PASSWORD
-  }
-});
-
+// --------------------
 // User Registration
+// --------------------
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, phone, email, address, year } = req.body;
 
@@ -64,33 +57,30 @@ app.post('/api/register', async (req, res) => {
     const newUser = new User({ firstName, lastName, phone, email, address, year });
     await newUser.save();
 
-    const mailOptions = {
-      from: process.env.ZOHO_EMAIL,
-      to: email,
-      subject: 'Registration Successful – SCM’25',
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2 style="color: #2c3e50;">Hello ${firstName},</h2>
-          <p>Thank you for registering for <strong>SCM’25</strong>! We are excited to receive you.</p>
-          
-          <p>Please be sure to check the website for important information concerning the meeting.</p>
-          
-          <p>In the meantime, feel free to explore our website at 
-            <a href="https://supernaturalcc.org" target="_blank" style="color: #1e90ff;">Supernaturalcc.org</a> 
-            for resources that will bless you.
-          </p>
-          
-          <p style="margin-top: 30px;">See you this November at the <strong>Supernatural Camp Meeting '25</strong>!</p>
-          
-          <p>Looking forward to receiving you,</p>
-          <p style="font-weight: bold;">Ayo Benson</p>
-        </div>
-      `
-    };
-
-
+    // Send registration email via Resend
     try {
-      await transporter.sendMail(mailOptions);
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        subject: 'Registration Successful – SCM’25',
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2c3e50;">Hello ${firstName},</h2>
+            <p>Thank you for registering for <strong>SCM’25</strong>! We’re so excited to welcome you.</p>
+            <p>If you’ll be staying at the hotel, please take a moment to complete the form 
+              <a href="https://docs.google.com/forms/d/e/1FAIpQLSfoxlzpNI8NAUOOPVThFTqmJnySRWth2chQUp_fdMz0fpo7qA/viewform?usp=preview" target="_blank">Hotel Form</a>.
+            </p>
+            <p>Also, don’t forget to visit our website for important updates and details about the meeting.</p>
+            <p>In the meantime, feel free to explore 
+              <a href="https://supernaturalcc.org" target="_blank" style="color: #1e90ff;">Supernaturalcc.org</a> 
+              for resources that will bless and inspire you.
+            </p>
+            <p style="margin-top: 30px;">We can’t wait to see you this Thanksgiving at <strong>Supernatural Camp Meeting 2025</strong>!</p>
+            <p>Looking forward to receiving you,</p>
+            <p style="font-weight: bold;">Ayo Benson</p>
+          </div>
+        `
+      });
       console.log(`Registration email sent to ${email}`);
       res.status(200).json({ message: 'Registration successful and email sent!' });
     } catch (mailErr) {
@@ -103,7 +93,9 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+// --------------------
 // Attendance Management
+// --------------------
 app.post('/api/mark-attendance', async (req, res) => {
   const { email, session, year } = req.body;
 
@@ -141,7 +133,6 @@ app.get('/api/check-attendance', async (req, res) => {
   }
 });
 
-
 app.post('/api/remove-attendance', async (req, res) => {
   const { email, session, year } = req.body;
 
@@ -163,7 +154,9 @@ app.post('/api/remove-attendance', async (req, res) => {
   }
 });
 
+// --------------------
 // Queries
+// --------------------
 app.get('/api/attendance/:session/:year', async (req, res) => {
   const { session, year } = req.params;
   try {
@@ -200,7 +193,9 @@ app.get('/api/users-no-attendance/:year', async (req, res) => {
   }
 });
 
-// Contact Form
+// --------------------
+// Contact Form using Resend
+// --------------------
 app.post('/api/contact', async (req, res) => {
   const { name, email, phone, message, reason } = req.body;
 
@@ -224,11 +219,12 @@ app.post('/api/contact', async (req, res) => {
   }
 
   try {
-    await transporter.sendMail({
-      from: process.env.ZOHO_EMAIL,
+    await resend.emails.send({
+      from: FROM_EMAIL,
       to: process.env.CONTACT_RECEIVER_EMAIL,
       subject,
-      text: body
+      text: body,
+      html: `<pre>${body}</pre>`
     });
     res.status(200).json({ message: 'Message sent successfully!' });
   } catch (err) {
@@ -237,7 +233,9 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Broadcasts
+// --------------------
+// Broadcasts using Resend
+// --------------------
 app.post('/api/send-user-broadcast', async (req, res) => {
   const { customHtml } = req.body;
   try {
@@ -248,23 +246,20 @@ app.post('/api/send-user-broadcast', async (req, res) => {
 
     const sendOps = users.map(u => {
       const unsubscribeLink = `https://supernaturalcampmeeting.org/unsubscribe/${u._id}`;
-      const unsubscribeDirect = `https://supernaturalcampmeeting.org/api/unsubscribe/${u._id}`;
       const html = `
         <p>Hello ${u.firstName},</p>
         ${customHtml}
         <hr />
         <p><a href="${unsubscribeLink}">Unsubscribe</a></p>
       `;
-      return transporter.sendMail({
-        from: process.env.ZOHO_EMAIL,
+      return resend.emails.send({
+        from: FROM_EMAIL,
         to: u.email,
         subject: 'Important Update',
-        html,
-        headers: {
-      'List-Unsubscribe': `<${unsubscribeDirect}>`
-    }
+        html
       });
     });
+
     await Promise.all(sendOps);
     res.status(200).json({ message: `Broadcast sent to ${users.length} users.` });
   } catch (err) {
@@ -273,7 +268,9 @@ app.post('/api/send-user-broadcast', async (req, res) => {
   }
 });
 
-// Unsubscribe endpoint (GET for link clicks)
+// --------------------
+// Unsubscribe endpoint
+// --------------------
 app.get('/api/unsubscribe/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -287,7 +284,9 @@ app.get('/api/unsubscribe/:id', async (req, res) => {
   }
 });
 
+// --------------------
 // Stripe Checkout Session
+// --------------------
 app.post('/api/create-checkout-session', async (req, res) => {
   const { amount, name, email, type, event } = req.body;
   try {
@@ -308,10 +307,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
       customer_email: email,
       success_url: `https://supernaturalcampmeeting.org/payment-success`,
       cancel_url: `https://supernaturalcampmeeting.org/payment-error`,
-      metadata: {
-        donor_name: name,
-        donation_type: type
-      }
+      metadata: { donor_name: name, donation_type: type }
     });
     res.json({ id: session.id });
   } catch (err) {
@@ -320,15 +316,17 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
-// Serve static files from the "dist" directory
+// --------------------
+// Static Files & SPA fallback
+// --------------------
 app.use(express.static(path.join(__dirname, 'dist')));
-
-// Optional: fallback to index.html for Single Page Applications (e.g., React/Vue)
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
 });
 
+// --------------------
 // Start Server
+// --------------------
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
