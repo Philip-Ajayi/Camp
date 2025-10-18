@@ -14,7 +14,7 @@ const port = process.env.PORT || 5000;
 // Resend Setup
 // --------------------
 const resend = new Resend('re_euN3FPGc_4gwRE3EjetMmH3QTbVekQiAk'); // ✅ New API key
-const FROM_EMAIL = 'Supernatural CC <info@supernaturalcc.org>';
+const FROM_EMAIL = 'Supernatural CC <info@noreply.supernaturalcc.org>';
 
 // Middleware
 app.use(express.json());
@@ -330,3 +330,4 @@ app.get('*', (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
