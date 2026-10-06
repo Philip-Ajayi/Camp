@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 // --------------------
 // Resend Setup
 // --------------------
-const resend = new Resend('re_eRE3EjetMmH3QTbVekQiAk'); // ✅ New API key
+const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = 'Supernatural CC <info@noreply.supernaturalcc.org>';
 
 // Middleware
