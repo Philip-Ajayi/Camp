@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 // --------------------
 // Resend Setup
 // --------------------
-const resend = new Resend('re_euN3FPGc_4gwRE3EjetMmH3QTbVekQiAk'); // ✅ New API key
+const resend = new Resend('re_eRE3EjetMmH3QTbVekQiAk'); // ✅ New API key
 const FROM_EMAIL = 'Supernatural CC <info@noreply.supernaturalcc.org>';
 
 // Middleware
@@ -33,12 +33,15 @@ const userSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   phone: String,
-  email: { type: String, unique: true, required: true },
+  email: { type: String, required: true }, // Removed unique: true
   address: String,
   year: { type: Number, default: () => new Date().getFullYear() },
   attendance: { type: [Number], default: [] },
   unsubscribed: { type: Boolean, default: false }
 });
+
+// Enforce uniqueness for the combination of email AND year
+userSchema.index({ email: 1, year: 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 
@@ -47,14 +50,16 @@ const User = mongoose.model('User', userSchema);
 // --------------------
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, phone, email, address, year } = req.body;
+  const targetYear = year || new Date().getFullYear();
 
   try {
-    const existing = await User.findOne({ email });
+    // Check if user exists for THIS year
+    const existing = await User.findOne({ email, year: targetYear });
     if (existing) {
-      return res.status(400).json({ message: 'A user with this email already exists.' });
+      return res.status(400).json({ message: 'A user with this email is already registered for this year.' });
     }
 
-    const newUser = new User({ firstName, lastName, phone, email, address, year });
+    const newUser = new User({ firstName, lastName, phone, email, address, year: targetYear });
     await newUser.save();
 
     // Send registration email via Resend
